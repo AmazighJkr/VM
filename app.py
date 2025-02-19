@@ -101,12 +101,13 @@ def handle_sell_product(ws, data):
         products_table = f"products{company_id}"
         
         # Fetch product price from the correct products table
-        cursor.execute(f"SELECT productPrice FROM {products_table} WHERE vendingMachineId = %s AND productCode = %s", (vending_machine_id, product_code))
+        cursor.execute(f"SELECT productPrice, productName FROM {products_table} WHERE vendingMachineId = %s AND productCode = %s", (vending_machine_id, product_code))
         product = cursor.fetchone()
         if not product:
             ws.send(json.dumps({"sell_response": "Product not found in vending machine"}))
             return
         product_price = product[0]
+        product_name = product[1]
         
         # Verify user
         cursor.execute("SELECT userId, balance FROM users WHERE uid = %s AND password = %s", (uid, password))
@@ -128,8 +129,8 @@ def handle_sell_product(ws, data):
         # Record the sale
         sale_table = validate_table_name(f"selles{vending_machine_id}")
         cursor.execute(
-            f"INSERT INTO {sale_table} (vendingMachineId, productName, SalePrice, saleTime) VALUES (%s, %s, %s, NOW())",
-            (vending_machine_id, product_code, product_price)
+            f"INSERT INTO {sale_table} (vendingMachineId,productCode, productName, SalePrice, saleTime) VALUES (%s, %s, %s, NOW())",
+            (vending_machine_id, product_code, product_name, product_price)
         )
 
         # Record the purchase
