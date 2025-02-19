@@ -14,6 +14,7 @@ app = Flask(__name__, template_folder=".")  # Look for HTML files in the same di
 CORS(app)
 bcrypt = Bcrypt(app)
 sock = Sock(app)  # WebSocket setup
+app.secret_key = 'your_secret_key'  # Keep this secure!
 
 # MySQL Database Configuration
 app.config["MYSQL_HOST"] = "sql7.freesqldatabase.com"
