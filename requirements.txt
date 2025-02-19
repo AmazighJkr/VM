@@ -13,4 +13,5 @@ requests==2.31.0
 websocket-client==1.6.1
 flask-bcrypt==1.0.1
 Flask-Session==0.8.0
+simple-websocket==0.10.1  
 
