@@ -10,6 +10,8 @@ from flask import Flask, request, jsonify, session, redirect, url_for, render_te
 from flask_mysqldb import MySQL
 from flask_bcrypt import Bcrypt
 import threading
+import simple_websocket
+
 
 app = Flask(__name__, template_folder=".")  # Look for HTML files in the same directory
 CORS(app)
@@ -61,6 +63,7 @@ def websocket_connection(ws):
             try:
                 message = ws.receive()
                 if not message:
+                    print("Client disconnected.")
                     break
 
                 data = json.loads(message)
@@ -76,13 +79,25 @@ def websocket_connection(ws):
                 else:
                     ws.send(json.dumps({"error": "Invalid event type"}))
 
+            except simple_websocket.errors.ConnectionClosed:
+                print("WebSocket connection closed.")
+                break  # Exit the loop when the connection is closed
+
             except Exception as e:
-                ws.send(json.dumps({"error": str(e)}))
-                break
+                print(f"WebSocket error: {e}")
+                try:
+                    ws.send(json.dumps({"error": str(e)}))
+                except simple_websocket.errors.ConnectionClosed:
+                    print("Failed to send error message: WebSocket is already closed.")
+                break  # Exit on error
 
     # Start a new thread for handling WebSocket messages
     ws_thread = threading.Thread(target=handle_ws_messages, daemon=True)
     ws_thread.start()
+
+    # Keep the main function alive while the thread runs
+    while ws_thread.is_alive():
+        time.sleep(0.1)  # Prevent busy-waiting
 
 import json
 from flask_mysqldb import MySQL
