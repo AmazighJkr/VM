@@ -106,8 +106,7 @@ def handle_sell_product(ws, data):
         if not product:
             ws.send(json.dumps({"sell_response": "Product not found in vending machine"}))
             return
-        product_price = product[0]
-        product_name = product[1]
+        product_price, product_name = product
         
         # Verify user
         cursor.execute("SELECT userId, balance FROM users WHERE uid = %s AND password = %s", (uid, password))
