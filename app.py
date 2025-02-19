@@ -1,18 +1,23 @@
+import pymysql
+pymysql.install_as_MySQLdb()
+
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+from flask_sock import Sock
+import json
+import os
 from flask import Flask, request, jsonify, session, redirect, url_for, render_template
 from flask_mysqldb import MySQL
-from flask_bcrypt import Bcrypt
-from flask_cors import CORS
 
-app = Flask(__name__, template_folder=".")  # Look for HTML files in the same directory
-CORS(app)
-bcrypt = Bcrypt(app)
-app.secret_key = 'your_secret_key'  # Keep this secure!
+app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
+sock = Sock(app)  # WebSocket setup
 
-# MySQL Database Configuration
+# Database configuration (update with correct values)
 app.config["MYSQL_HOST"] = "sql7.freesqldatabase.com"
-app.config["MYSQL_USER"] = "sql7763333"
-app.config["MYSQL_PASSWORD"] = "BtCcUDutUB"
-app.config["MYSQL_DB"] = "sql7763333"
+app.config["MYSQL_USER"] = "sql7762208"
+app.config["MYSQL_PASSWORD"] = "MqFJpHymhB"
+app.config["MYSQL_DB"] = "sql7762208"
 app.config["MYSQL_PORT"] = 3306
 
 mysql = MySQL(app)
@@ -21,6 +26,170 @@ mysql = MySQL(app)
 @app.route('/')
 def home():
     return redirect(url_for('login'))
+
+# Helper function to validate table names
+def validate_table_name(table_name):
+    allowed_chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
+    if all(char in allowed_chars for char in table_name):
+        return table_name
+    raise ValueError("Invalid table name")
+
+# Route to fetch vending machines
+@app.route("/vendingmachines", methods=["GET"])
+def get_vending_machines():
+    cursor = None
+    try:
+        cursor = mysql.connection.cursor()
+        cursor.execute("SELECT vendingMachineCode AS code, vendingMachineName AS name FROM vendingmachines")
+        vending_machines = cursor.fetchall()
+        return jsonify([{ "code": row[0], "name": row[1] } for row in vending_machines])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+
+# WebSocket route
+@sock.route('/ws')
+def websocket_connection(ws):
+    while True:
+        try:
+            message = ws.receive()
+            if not message:
+                break
+
+            data = json.loads(message)
+            event = data.get("event")
+            payload = data.get("data")
+
+            if event == "sell_product":
+                handle_sell_product(ws, payload)
+            elif event == "update_price":
+                handle_update_price(ws, payload)
+            elif event == "custom_command":
+                handle_custom_command(ws, payload)
+            else:
+                ws.send(json.dumps({"error": "Invalid event type"}))
+
+        except Exception as e:
+            ws.send(json.dumps({"error": str(e)}))
+            break
+
+# Sell product functionality
+def handle_sell_product(ws, data):
+    vending_machine_code = data.get("vendingMachineCode")
+    uid = data.get("uid")
+    password = data.get("password")
+    product_code = data.get("productCode")
+    
+    cursor = None
+    try:
+        cursor = mysql.connection.cursor()
+
+        # Verify vending machine
+        cursor.execute("SELECT vendingMachineId, companyId FROM vendingmachines WHERE vendingMachineCode = %s", (vending_machine_code,))
+        vending_machine = cursor.fetchone()
+        if not vending_machine:
+            ws.send(json.dumps({"sell_response": "Invalid vending machine code"}))
+            return
+        vending_machine_id, company_id = vending_machine
+        
+        # Determine correct products table
+        products_table = f"products{company_id}"
+        
+        # Fetch product price from the correct products table
+        cursor.execute(f"SELECT productPrice FROM {products_table} WHERE vendingMachineId = %s AND productCode = %s", (vending_machine_id, product_code))
+        product = cursor.fetchone()
+        if not product:
+            ws.send(json.dumps({"sell_response": "Product not found in vending machine"}))
+            return
+        product_price = product[0]
+        
+        # Verify user
+        cursor.execute("SELECT userId, balance FROM users WHERE uid = %s AND password = %s", (uid, password))
+        user = cursor.fetchone()
+        if not user:
+            ws.send(json.dumps({"sell_response": "Invalid user credentials"}))
+            return
+        user_id, balance = user
+
+        # Check balance
+        if balance < product_price:
+            ws.send(json.dumps({"sell_response": f"Insufficient balance, {balance}"}))
+            return
+
+        # Update user's balance
+        new_balance = balance - product_price
+        cursor.execute("UPDATE users SET balance = %s WHERE userId = %s", (new_balance, user_id))
+
+        # Record the sale
+        sale_table = validate_table_name(f"selles{vending_machine_id}")
+        cursor.execute(
+            f"INSERT INTO {sale_table} (vendingMachineId, productName, SalePrice, saleTime) VALUES (%s, %s, %s, NOW())",
+            (vending_machine_id, product_code, product_price)
+        )
+
+        # Record the purchase
+        purchase_table = validate_table_name(f"purchases{user_id}")
+        cursor.execute(
+            f"INSERT INTO {purchase_table} (clientId, price, date) VALUES (%s, %s, NOW())",
+            (user_id, product_price)
+        )
+
+        mysql.connection.commit()
+        ws.send(json.dumps({"sell_response": f"Sale successful, {new_balance}"}))
+
+    except Exception as e:
+        ws.send(json.dumps({"sell_response": str(e)}))
+
+    finally:
+        if cursor:
+            cursor.close()
+
+# Update price functionality
+def handle_update_price(ws, data):
+    vending_machine_code = data.get("vendingMachineCode")
+    product_code = data.get("productCode")
+    new_price = data.get("newPrice")
+
+    cursor = None
+    try:
+        cursor = mysql.connection.cursor()
+
+        # Verify vending machine
+        cursor.execute("SELECT vendingMachineId FROM vendingmachines WHERE vendingMachineCode = %s", (vending_machine_code,))
+        vending_machine = cursor.fetchone()
+        if not vending_machine:
+            ws.send(json.dumps({"update_response": "Invalid vending machine code"}))
+            return
+        vending_machine_id = vending_machine[0]
+
+        # Update product price
+        query = """
+            UPDATE products 
+            SET productPrice = %s 
+            WHERE vendingMachineId = %s AND productCode = %s
+        """
+        cursor.execute(query, (new_price, vending_machine_id, product_code))
+        mysql.connection.commit()
+        ws.send(json.dumps({"update_response": "Product price updated successfully"}))
+
+    except Exception as e:
+        ws.send(json.dumps({"update_response": str(e)}))
+
+    finally:
+        if cursor:
+            cursor.close()
+
+# Custom command functionality
+def handle_custom_command(ws, data):
+    vending_machine_code = data.get("vendingMachineCode")
+    command = data.get("command")
+    try:
+        ws.send(json.dumps({"custom_command_response": f"Command '{command}' sent to vending machine '{vending_machine_code}'"}))
+    except Exception as e:
+        ws.send(json.dumps({"error": str(e)}))
+        
 
 # Serve Login Page
 @app.route('/login', methods=['GET', 'POST'])
@@ -151,5 +320,7 @@ def update_prices():
 
     return redirect(url_for('company_dashboard'))  # Refresh page
 
-if __name__ == '__main__':
-    app.run(debug=True)
+
+# Run the Flask app
+if __name__ == "__main__":
+    app.run(host='0.0.0.0', port=os.getenv('PORT', 3000), debug=True)
