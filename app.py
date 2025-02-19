@@ -9,6 +9,7 @@ import os
 from flask import Flask, request, jsonify, session, redirect, url_for, render_template
 from flask_mysqldb import MySQL
 from flask_bcrypt import Bcrypt
+import threading
 
 app = Flask(__name__, template_folder=".")  # Look for HTML files in the same directory
 CORS(app)
