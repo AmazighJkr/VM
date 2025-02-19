@@ -55,28 +55,33 @@ def get_vending_machines():
 # WebSocket route
 @sock.route('/ws')
 def websocket_connection(ws):
-    while True:
-        try:
-            message = ws.receive()
-            if not message:
+    def handle_ws_messages():
+        while True:
+            try:
+                message = ws.receive()
+                if not message:
+                    break
+
+                data = json.loads(message)
+                event = data.get("event")
+                payload = data.get("data")
+
+                if event == "sell_product":
+                    handle_sell_product(ws, payload)
+                elif event == "update_price":
+                    handle_update_price(ws, payload)
+                elif event == "custom_command":
+                    handle_custom_command(ws, payload)
+                else:
+                    ws.send(json.dumps({"error": "Invalid event type"}))
+
+            except Exception as e:
+                ws.send(json.dumps({"error": str(e)}))
                 break
 
-            data = json.loads(message)
-            event = data.get("event")
-            payload = data.get("data")
-
-            if event == "sell_product":
-                handle_sell_product(ws, payload)
-            elif event == "update_price":
-                handle_update_price(ws, payload)
-            elif event == "custom_command":
-                handle_custom_command(ws, payload)
-            else:
-                ws.send(json.dumps({"error": "Invalid event type"}))
-
-        except Exception as e:
-            ws.send(json.dumps({"error": str(e)}))
-            break
+    # Start a new thread for handling WebSocket messages
+    ws_thread = threading.Thread(target=handle_ws_messages, daemon=True)
+    ws_thread.start()
 
 import json
 from flask_mysqldb import MySQL
