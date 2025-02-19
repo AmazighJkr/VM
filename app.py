@@ -78,6 +78,9 @@ def websocket_connection(ws):
             ws.send(json.dumps({"error": str(e)}))
             break
 
+import json
+from flask_mysqldb import MySQL
+
 # Sell product functionality
 def handle_sell_product(ws, data):
     vending_machine_code = data.get("vendingMachineCode")
@@ -100,7 +103,7 @@ def handle_sell_product(ws, data):
         # Determine correct products table
         products_table = f"products{company_id}"
         
-        # Fetch product price from the correct products table
+        # Fetch product price and name from the correct products table
         cursor.execute(f"SELECT productPrice, productName FROM {products_table} WHERE vendingMachineId = %s AND productCode = %s", (vending_machine_id, product_code))
         product = cursor.fetchone()
         if not product:
@@ -128,7 +131,7 @@ def handle_sell_product(ws, data):
         # Record the sale
         sale_table = validate_table_name(f"selles{vending_machine_id}")
         cursor.execute(
-            f"INSERT INTO {sale_table} (vendingMachineId,productCode, productName, SalePrice, saleTime) VALUES (%s, %s, %s, NOW())",
+            f"INSERT INTO {sale_table} (vendingMachineId, productCode, productName, SalePrice, saleTime) VALUES (%s, %s, %s, %s, NOW())",
             (vending_machine_id, product_code, product_name, product_price)
         )
 
