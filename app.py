@@ -8,9 +8,11 @@ import json
 import os
 from flask import Flask, request, jsonify, session, redirect, url_for, render_template
 from flask_mysqldb import MySQL
+from flask_bcrypt import Bcrypt
 
-app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+app = Flask(__name__, template_folder=".")  # Look for HTML files in the same directory
+CORS(app)
+bcrypt = Bcrypt(app)
 sock = Sock(app)  # WebSocket setup
 
 # Database configuration (update with correct values)
