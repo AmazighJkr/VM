@@ -16,12 +16,12 @@ bcrypt = Bcrypt(app)
 socketio = SocketIO(app, cors_allowed_origins="*")  # WebSocket setup with CORS
 app.secret_key = 'your_secret_key'  # Keep this secure!
 
-# MySQL Database Configuration
-app.config["MYSQL_HOST"] = "sql7.freesqldatabase.com"
-app.config["MYSQL_USER"] = "sql7763333"
-app.config["MYSQL_PASSWORD"] = "BtCcUDutUB"
-app.config["MYSQL_DB"] = "sql7763333"
-app.config["MYSQL_PORT"] = 3306
+# Database configuration (update with correct values)
+app.config["MYSQL_HOST"] = "db4free.net"  # Hostname for db4free
+app.config["MYSQL_USER"] = "vmmachine03"  # Use the username given by db4free
+app.config["MYSQL_PASSWORD"] = "vmmachine03"  # Use the password given by db4free
+app.config["MYSQL_DB"] = "vmmachine03"  # Use the database name given by db4free
+app.config["MYSQL_PORT"] = 3306  # Default MySQL port
 
 mysql = MySQL(app)
 
