@@ -22,6 +22,7 @@ app.config["MYSQL_USER"] = "vmmachine03"  # Use the username given by db4free
 app.config["MYSQL_PASSWORD"] = "vmmachine03"  # Use the password given by db4free
 app.config["MYSQL_DB"] = "vmmachine03"  # Use the database name given by db4free
 app.config["MYSQL_PORT"] = 3306  # Default MySQL port
+app.config["MYSQL_CONNECT_TIMEOUT"] = 30
 
 mysql = MySQL(app)
 
