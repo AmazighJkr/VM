@@ -151,18 +151,24 @@ def handle_update_price(data):
     cursor = None
     try:
         cursor = mysql.connection.cursor()
-        cursor.execute("SELECT vendingMachineId FROM vendingmachines WHERE vendingMachineCode = %s", (vending_machine_code,))
+        cursor.execute("SELECT vendingMachineId, companyId FROM vendingmachines WHERE vendingMachineCode = %s", (vending_machine_code,))
         vending_machine = cursor.fetchone()
+        
         if not vending_machine:
             socketio.send(json.dumps({"update_response": "Invalid vending machine code"}))
             return
-        vending_machine_id = vending_machine[0]
-
-        query = "UPDATE products SET productPrice = %s WHERE vendingMachineId = %s AND productCode = %s"
+        
+        vending_machine_id, company_Id = vending_machine  # ✅ Proper unpacking
+        
+        product_table = validate_table_name(f"products{company_Id}")
+        
+        # ✅ Format the table name separately
+        query = f"UPDATE {product_table} SET productPrice = %s WHERE vendingMachineId = %s AND productCode = %s"
         cursor.execute(query, (new_price, vending_machine_id, product_code))
+        
         mysql.connection.commit()
         socketio.send(json.dumps({"update_response": "Product price updated successfully"}))
-
+        
     except Exception as e:
         socketio.send(json.dumps({"update_response": str(e)}))
 
