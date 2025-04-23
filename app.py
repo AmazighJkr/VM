@@ -13,7 +13,7 @@ from flask_bcrypt import Bcrypt
 app = Flask(__name__, template_folder=".")  # Look for HTML files in the same directory
 CORS(app)
 bcrypt = Bcrypt(app)
-socketio = SocketIO(app, cors_allowed_origins="*")  # WebSocket setup with CORS
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 app.secret_key = 'your_secret_key'  # Keep this secure!
 
 # Database configuration (update with correct values)
