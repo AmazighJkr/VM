@@ -106,7 +106,7 @@ def handle_sell_product(data):
             return
         product_price, product_name = product
 
-        cursor.execute("SELECT userId, balance FROM users WHERE uid = %s AND password = %s", (uid, password))
+        cursor.execute("SELECT clientId, balance FROM users WHERE uid = %s AND password = %s", (uid, password))
         user = cursor.fetchone()
         if not user:
             socketio.send(json.dumps({"sell_response": "Invalid user credentials"}))
