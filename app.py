@@ -106,12 +106,12 @@ def handle_sell_product(data):
             return
         product_price, product_name = product
 
-        cursor.execute("SELECT clientId, balance FROM users WHERE uid = %s AND password = %s", (uid, password))
+        cursor.execute("SELECT userId, clientId, balance FROM users WHERE uid = %s AND password = %s", (uid, password))
         user = cursor.fetchone()
         if not user:
             socketio.send(json.dumps({"sell_response": "Invalid user credentials"}))
             return
-        user_id, balance = user
+        user_id, client_Id, balance = user
 
         if balance < product_price:
             socketio.send(json.dumps({"sell_response": f"Insufficient balance, {balance}"}))
@@ -126,7 +126,7 @@ def handle_sell_product(data):
             (vending_machine_id, product_code, product_name, product_price)
         )
 
-        purchase_table = validate_table_name(f"purchases{user_id}")
+        purchase_table = validate_table_name(f"purchases{client_Id}")
         cursor.execute(
             f"INSERT INTO {purchase_table} (clientId, price, date) VALUES (%s, %s, NOW())",
             (user_id, product_price)
