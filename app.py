@@ -17,10 +17,10 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode="gevent")  # or "e
 app.secret_key = 'your_secret_key'  # Keep this secure!
 
 # Database configuration (update with correct values)
-app.config["MYSQL_HOST"] = "sql7.freesqldatabase.com"  # Hostname for db4free
-app.config["MYSQL_USER"] = "sql7774442"  # Use the username given by db4free
-app.config["MYSQL_PASSWORD"] = "DFkzXapBCf"  # Use the password given by db4free
-app.config["MYSQL_DB"] = "sql7774442"  # Use the database name given by db4free
+app.config["MYSQL_HOST"] = "db4free.net"  # Hostname for db4free
+app.config["MYSQL_USER"] = "vmmachine03"  # Use the username given by db4free
+app.config["MYSQL_PASSWORD"] = "vmmachine03"  # Use the password given by db4free
+app.config["MYSQL_DB"] = "vmmachine03"  # Use the database name given by db4free
 app.config["MYSQL_PORT"] = 3306  # Default MySQL port
 app.config["MYSQL_CONNECT_TIMEOUT"] = 30
 
